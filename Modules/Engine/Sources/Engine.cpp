@@ -1,5 +1,6 @@
 #include <VkGuide/Engine.hpp>
-#include <VkGuide/VkInitializers.hpp>
+#include <VkGuide/VkInits.hpp>
+#include <VkGuide/VkUtils.hpp>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -45,8 +46,12 @@ void VulkanEngine::cleanup() {
     if (!m_IsInitialized) return;
 
     vkDeviceWaitIdle(m_Device);
+
     for (FrameData &frame : m_Frames) {
         vkDestroyCommandPool(m_Device, frame.CommandPool, nullptr);
+        vkDestroyFence(m_Device, frame.RenderFence, nullptr);
+        vkDestroySemaphore(m_Device, frame.SwapchainSemaphore, nullptr);
+        vkDestroySemaphore(m_Device, frame.RenderSemaphore, nullptr);
     }
 
     destroySwapchain();
@@ -61,6 +66,48 @@ void VulkanEngine::cleanup() {
 }
 
 void VulkanEngine::draw() {
+    FrameData &frame = getCurrentFrame();
+
+    VK_CHECK(vkWaitForFences(m_Device, 1, &frame.RenderFence, VK_TRUE, 1000000000));
+    VK_CHECK(vkResetFences(m_Device, 1, &frame.RenderFence));
+
+    std::uint32_t swapchainImageIndex;
+    VK_CHECK(vkAcquireNextImageKHR(m_Device, m_Swapchain, 1000000000, frame.SwapchainSemaphore, nullptr, &swapchainImageIndex));
+    const VkImage &swapchainImage = m_SwapchainImages[swapchainImageIndex];
+    // const VkImageView &swapchainImageView = m_SwapchainImageViews[swapchainImageIndex];
+
+    const VkCommandBuffer &commandBuffer = frame.CommandBuffer;
+    VK_CHECK(vkResetCommandBuffer(commandBuffer, 0));
+    VkCommandBufferBeginInfo commandBufferBeginInfo = vkinit::GetCommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+
+    vkutils::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    VkClearColorValue clearValue{{0.0f, 0.0f, std::abs(std::sin(m_FrameNumber / 120.f)), 1.0f}};
+    VkImageSubresourceRange clearRange = vkinit::GetImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCmdClearColorImage(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+    vkutils::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    VK_CHECK(vkEndCommandBuffer(commandBuffer));
+
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo = vkinit::GetCommandBufferSubmitInfo(commandBuffer);
+    VkSemaphoreSubmitInfo waitInfo = vkinit::GetSemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, frame.SwapchainSemaphore);
+    VkSemaphoreSubmitInfo signalInfo = vkinit::GetSemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, frame.RenderSemaphore);
+    VkSubmitInfo2 submitInfo = vkinit::GetSubmitInfo(commandBufferSubmitInfo, &signalInfo, &waitInfo);
+    VK_CHECK(vkQueueSubmit2(m_GraphicsQueue, 1, &submitInfo, frame.RenderFence));
+
+    VkPresentInfoKHR presentInfo{
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &frame.RenderSemaphore,
+
+        .swapchainCount = 1,
+        .pSwapchains = &m_Swapchain,
+
+        .pImageIndices = &swapchainImageIndex,
+    };
+    VK_CHECK(vkQueuePresentKHR(m_GraphicsQueue, &presentInfo));
+
+    m_FrameNumber++;
 }
 
 void VulkanEngine::run() {
@@ -71,7 +118,6 @@ void VulkanEngine::run() {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
                 quit = true;
-                m_StopRendering = true;
             }
 
             if (e.type == SDL_WINDOWEVENT) {
@@ -158,6 +204,15 @@ void VulkanEngine::initCommands() {
 }
 
 void VulkanEngine::initSyncStructures() {
+    VkFenceCreateInfo fenceCreateInfo = vkinit::GetFenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkSemaphoreCreateInfo semaphoreCreateInfo = vkinit::GetSemaphoreCreateInfo();
+
+    for (std::uint32_t i = 0; i < FRAME_OVERLAP; i++) {
+        VK_CHECK(vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_Frames[i].RenderFence));
+
+        VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].SwapchainSemaphore));
+        VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_Frames[i].RenderSemaphore));
+    }
 }
 
 void VulkanEngine::createSwapchain(std::uint32_t width, std::uint32_t height) {

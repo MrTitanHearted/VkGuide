@@ -5,6 +5,10 @@
 struct FrameData {
     VkCommandPool CommandPool;
     VkCommandBuffer CommandBuffer;
+
+    VkSemaphore SwapchainSemaphore;
+    VkSemaphore RenderSemaphore;
+    VkFence RenderFence;
 };
 
 constexpr std::uint32_t FRAME_OVERLAP{2};
