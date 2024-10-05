@@ -1,0 +1,8 @@
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+AllowShortIfStatementsOnASingleLine: true
+IndentCaseLabels: true
+ColumnLimit: 0
+NamespaceIndentation: All
+FixNamespaceComments: true
