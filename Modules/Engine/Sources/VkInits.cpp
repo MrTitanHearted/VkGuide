@@ -71,7 +71,7 @@ namespace vkinit {
     VkSubmitInfo2 GetSubmitInfo(const VkCommandBufferSubmitInfo &commandBufferInfo, VkSemaphoreSubmitInfo *signalSemaphoreInfo, VkSemaphoreSubmitInfo *waitSemaphoreInfo) {
         return VkSubmitInfo2{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-            
+
             .waitSemaphoreInfoCount = (waitSemaphoreInfo == nullptr) ? 0U : 1U,
             .pWaitSemaphoreInfos = waitSemaphoreInfo,
 
@@ -80,6 +80,36 @@ namespace vkinit {
 
             .signalSemaphoreInfoCount = (signalSemaphoreInfo == nullptr) ? 0U : 1U,
             .pSignalSemaphoreInfos = signalSemaphoreInfo,
+        };
+    }
+
+    VkImageCreateInfo GetImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent) {
+        return VkImageCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = format,
+            .extent = extent,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = usageFlags,
+        };
+    }
+
+    VkImageViewCreateInfo GetImageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectMask) {
+        return VkImageViewCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = format,
+            .subresourceRange = VkImageSubresourceRange{
+                .aspectMask = aspectMask,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
         };
     }
 }  // namespace vkinit

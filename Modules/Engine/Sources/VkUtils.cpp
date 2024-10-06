@@ -1,5 +1,5 @@
-#include <VkGuide/VkUtils.hpp>
 #include <VkGuide/VkInits.hpp>
+#include <VkGuide/VkUtils.hpp>
 
 namespace vkutils {
     void TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout) {
@@ -27,5 +27,42 @@ namespace vkutils {
         };
 
         vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+    }
+
+    void CopyImageToImage(VkCommandBuffer commandBuffer, VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {
+        VkImageBlit2 blitRegion{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+            .srcSubresource = VkImageSubresourceLayers{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .srcOffsets = {
+                VkOffset3D{0},
+                VkOffset3D{.x = (std::int32_t)srcSize.width, .y = (std::int32_t)srcSize.height, .z = 1},
+            },
+            .dstSubresource = VkImageSubresourceLayers{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstOffsets = {
+                VkOffset3D{0},
+                VkOffset3D{.x = (std::int32_t)dstSize.width, .y = (std::int32_t)dstSize.height, .z = 1},
+            },
+        };
+        VkBlitImageInfo2 blitInfo{
+            .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
+            .srcImage = src,
+            .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .dstImage = dst,
+            .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .regionCount = 1,
+            .pRegions = &blitRegion,
+            .filter = VK_FILTER_LINEAR,
+        };
+        vkCmdBlitImage2(commandBuffer, &blitInfo);
     }
 }  // namespace vkutils

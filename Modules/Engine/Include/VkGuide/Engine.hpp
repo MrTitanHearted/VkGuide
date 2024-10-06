@@ -1,6 +1,31 @@
 #pragma once
 
 #include <VkGuide/Defines.hpp>
+#include <VkGuide/VkTypes.hpp>
+#include <VkGuide/VkDescriptors.hpp>
+
+class DeletionQueue {
+   public:
+    DeletionQueue() = default;
+    ~DeletionQueue() = default;
+
+    void pushFunction(std::function<void()> &&function) {
+        m_Deletors.emplace_back(std::move(function));
+    }
+
+    void flush() {
+        for (std::deque<std::function<void()>>::reverse_iterator it = m_Deletors.rbegin();
+             it != m_Deletors.rend();
+             it++) {
+            (*it)();
+        }
+
+        m_Deletors.clear();
+    }
+
+   private:
+    std::deque<std::function<void()>> m_Deletors;
+};
 
 struct FrameData {
     VkCommandPool CommandPool;
@@ -9,6 +34,8 @@ struct FrameData {
     VkSemaphore SwapchainSemaphore;
     VkSemaphore RenderSemaphore;
     VkFence RenderFence;
+
+    DeletionQueue DeletionQueue;
 };
 
 constexpr std::uint32_t FRAME_OVERLAP{2};
@@ -35,9 +62,14 @@ class VulkanEngine {
     void initSwapchain();
     void initCommands();
     void initSyncStructures();
+    void initDescriptors();
+    void initPipelines();
+    void initBackgroundPipelines();
 
     void createSwapchain(std::uint32_t width, std::uint32_t height);
     void destroySwapchain();
+
+    void drawBackground(const VkCommandBuffer &commandBuffer);
 
     FrameData &getCurrentFrame();
 
@@ -48,25 +80,39 @@ class VulkanEngine {
     std::int32_t m_FrameNumber{0};
     bool m_StopRendering{false};
 
+    struct SDL_Window *m_Window{nullptr};
     VkExtent2D m_WindowExtent{1200, 1000};
 
-    VkInstance m_Instance;
-    VkDebugUtilsMessengerEXT m_DebugMessenger;
-    VkPhysicalDevice m_PhysicalDevice;
-    VkDevice m_Device;
-    VkSurfaceKHR m_Surface;
+    VkInstance m_Instance{VK_NULL_HANDLE};
+    VkDebugUtilsMessengerEXT m_DebugMessenger{VK_NULL_HANDLE};
+    VkPhysicalDevice m_PhysicalDevice{VK_NULL_HANDLE};
+    VkDevice m_Device{VK_NULL_HANDLE};
+    VkSurfaceKHR m_Surface{VK_NULL_HANDLE};
 
-    VkSwapchainKHR m_Swapchain;
-    VkFormat m_SwapchainImageFormat;
+    VkSwapchainKHR m_Swapchain{VK_NULL_HANDLE};
+    VkFormat m_SwapchainImageFormat{VK_FORMAT_UNDEFINED};
 
-    std::vector<VkImage> m_SwapchainImages;
-    std::vector<VkImageView> m_SwapchainImageViews;
-    VkExtent2D m_SwapchainExtent;
+    std::vector<VkImage> m_SwapchainImages{};
+    std::vector<VkImageView> m_SwapchainImageViews{};
+    VkExtent2D m_SwapchainExtent{};
 
-    VkQueue m_GraphicsQueue;
-    std::uint32_t m_GraphicsQueueIndex;
+    VkQueue m_GraphicsQueue{VK_NULL_HANDLE};
+    std::uint32_t m_GraphicsQueueIndex{0};
 
-    std::array<FrameData, FRAME_OVERLAP> m_Frames;
+    std::array<FrameData, FRAME_OVERLAP> m_Frames{};
 
-    struct SDL_Window *m_Window{nullptr};
+    DeletionQueue m_MainDeletionQueue{};
+
+    VmaAllocator m_Allocator{nullptr};
+
+    AllocatedImage m_DrawImage{};
+    VkExtent2D m_DrawExtent{};
+
+    DescriptorAllocator m_GlobalDescriptorAllocator{};
+
+    VkDescriptorSetLayout m_DrawImageDescriptorLayout{VK_NULL_HANDLE};
+    VkDescriptorSet m_DrawImageDescriptors{VK_NULL_HANDLE};
+
+    VkPipelineLayout m_GradientPipelineLayout{VK_NULL_HANDLE};
+    VkPipeline m_GradientPipeline{VK_NULL_HANDLE};
 };
