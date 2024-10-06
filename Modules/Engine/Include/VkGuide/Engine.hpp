@@ -1,8 +1,10 @@
 #pragma once
 
 #include <VkGuide/Defines.hpp>
-#include <VkGuide/VkTypes.hpp>
 #include <VkGuide/VkDescriptors.hpp>
+#include <VkGuide/VkTypes.hpp>
+
+constexpr std::uint32_t FRAME_OVERLAP{2};
 
 class DeletionQueue {
    public:
@@ -38,7 +40,19 @@ struct FrameData {
     DeletionQueue DeletionQueue;
 };
 
-constexpr std::uint32_t FRAME_OVERLAP{2};
+struct ComputePushConstants {
+    glm::vec4 Data1;
+    glm::vec4 Data2;
+    glm::vec4 Data3;
+    glm::vec4 Data4;
+};
+
+struct ComputeEffect {
+    const char *Name;
+    VkPipelineLayout Layout;
+    VkPipeline Pipeline;
+    ComputePushConstants Data;
+};
 
 class VulkanEngine {
    public:
@@ -65,11 +79,15 @@ class VulkanEngine {
     void initDescriptors();
     void initPipelines();
     void initBackgroundPipelines();
+    void initImGui();
 
     void createSwapchain(std::uint32_t width, std::uint32_t height);
     void destroySwapchain();
 
-    void drawBackground(const VkCommandBuffer &commandBuffer);
+    void drawBackground(VkCommandBuffer commandBuffer);
+    void drawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
+
+    void immediateSubmit(std::function<void(VkCommandBuffer commandBuffer)> &&function);
 
     FrameData &getCurrentFrame();
 
@@ -115,4 +133,11 @@ class VulkanEngine {
 
     VkPipelineLayout m_GradientPipelineLayout{VK_NULL_HANDLE};
     VkPipeline m_GradientPipeline{VK_NULL_HANDLE};
+
+    VkCommandPool m_ImmCommandPool{VK_NULL_HANDLE};
+    VkCommandBuffer m_ImmCommandBuffer{VK_NULL_HANDLE};
+    VkFence m_ImmFence{VK_NULL_HANDLE};
+
+    std::vector<ComputeEffect> m_BackgroundEffects{};
+    std::uint32_t m_CurrentBackgroundEffect{0U};
 };

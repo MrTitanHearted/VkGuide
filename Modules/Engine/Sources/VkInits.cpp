@@ -68,7 +68,7 @@ namespace vkinit {
         };
     }
 
-    VkSubmitInfo2 GetSubmitInfo(const VkCommandBufferSubmitInfo &commandBufferInfo, VkSemaphoreSubmitInfo *signalSemaphoreInfo, VkSemaphoreSubmitInfo *waitSemaphoreInfo) {
+    VkSubmitInfo2 GetSubmitInfo(const VkCommandBufferSubmitInfo& commandBufferInfo, VkSemaphoreSubmitInfo* signalSemaphoreInfo, VkSemaphoreSubmitInfo* waitSemaphoreInfo) {
         return VkSubmitInfo2{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
 
@@ -110,6 +110,37 @@ namespace vkinit {
                 .baseArrayLayer = 0,
                 .layerCount = 1,
             },
+        };
+    }
+
+    VkRenderingAttachmentInfo GetAttachmentInfo(VkImageView view, VkClearValue* clear, VkImageLayout layout) {
+        VkRenderingAttachmentInfo colorAttachment{
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = view,
+            .imageLayout = layout,
+            .loadOp = clear == nullptr ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        };
+
+        if (clear != nullptr) {
+            colorAttachment.clearValue = *clear;
+        }
+
+        return colorAttachment;
+    }
+
+    VkRenderingInfo GetRenderingInfo(VkExtent2D extent, const VkRenderingAttachmentInfo &colorAttachment, VkRenderingAttachmentInfo* depthAttachment) {
+        return VkRenderingInfo{
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+            .renderArea = VkRect2D{
+                .offset = VkOffset2D{.x = 0, .y = 0},
+                .extent = extent,
+            },
+            .layerCount = 1,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &colorAttachment,
+            .pDepthAttachment = depthAttachment,
+            .pStencilAttachment = nullptr,
         };
     }
 }  // namespace vkinit

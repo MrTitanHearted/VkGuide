@@ -19,4 +19,7 @@ namespace vkinit {
 
     VkImageCreateInfo GetImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
     VkImageViewCreateInfo GetImageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectMask);
+
+    VkRenderingAttachmentInfo GetAttachmentInfo(VkImageView view, VkClearValue *clear, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo GetRenderingInfo(VkExtent2D extent, const VkRenderingAttachmentInfo &colorAttachment, VkRenderingAttachmentInfo *depthAttachment);
 }  // namespace vkinit

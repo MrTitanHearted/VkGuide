@@ -33,38 +33,24 @@ if(MSVC)
 endif()
 
 if(MSVC)
-    function(compile_and_copy_shader input_file output_file shader_type)
-        add_custom_command(
-            OUTPUT ${output_file}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/$<CONFIG>/Assets/Shaders
-            COMMAND ${CMAKE_COMMAND} -E echo Compiling shader ${input_file} to ${output_file}
-            COMMAND glslangValidator -V ${input_file} -o ${output_file} --target-env vulkan1.3
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/Assets/Shaders
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${output_file} ${CMAKE_SOURCE_DIR}/Assets/Shaders
-            DEPENDS ${input_file}
-            COMMENT "Compiling and copying shader: ${input_file}"
-            VERBATIM
-        )
-    endfunction()
-
     set(SPIRV_OUTPUT_DIR ${CMAKE_BINARY_DIR}/$<CONFIG>/Assets/Shaders)
 else()
-    function(compile_and_copy_shader input_file output_file shader_type)
-        add_custom_command(
-            OUTPUT ${output_file}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/Assets/Shaders
-            COMMAND ${CMAKE_COMMAND} -E echo Compiling shader ${input_file} to ${output_file}
-            COMMAND glslangValidator -V ${input_file} -o ${output_file} --target-env vulkan1.3
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/Assets/Shaders
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${output_file} ${CMAKE_SOURCE_DIR}/Assets/Shaders
-            DEPENDS ${input_file}
-            COMMENT "Compiling and copying shader: ${input_file}"
-            VERBATIM
-        )
-    endfunction()
-
     set(SPIRV_OUTPUT_DIR ${CMAKE_BINARY_DIR}/Assets/Shaders)
 endif()
+
+function(compile_and_copy_shader input_file output_file shader_type)
+    add_custom_command(
+        OUTPUT ${output_file}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${SPIRV_OUTPUT_DIR}
+        COMMAND ${CMAKE_COMMAND} -E echo Compiling shader ${input_file} to ${output_file}
+        COMMAND glslangValidator -V ${input_file} -o ${output_file} --target-env vulkan1.3
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/Assets/Shaders
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${output_file} ${CMAKE_SOURCE_DIR}/Assets/Shaders
+        DEPENDS ${input_file}
+        COMMENT "Compiling and copying shader: ${input_file}"
+        VERBATIM
+    )
+endfunction()
 
 file(GLOB_RECURSE GLSL_FILES
     ${CMAKE_SOURCE_DIR}/Assets/Shaders/*.vert
