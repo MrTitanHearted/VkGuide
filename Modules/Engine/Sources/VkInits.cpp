@@ -68,7 +68,7 @@ namespace vkinit {
         };
     }
 
-    VkSubmitInfo2 GetSubmitInfo(const VkCommandBufferSubmitInfo& commandBufferInfo, VkSemaphoreSubmitInfo* signalSemaphoreInfo, VkSemaphoreSubmitInfo* waitSemaphoreInfo) {
+    VkSubmitInfo2 GetSubmitInfo(const VkCommandBufferSubmitInfo &commandBufferInfo, VkSemaphoreSubmitInfo *signalSemaphoreInfo, VkSemaphoreSubmitInfo *waitSemaphoreInfo) {
         return VkSubmitInfo2{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
 
@@ -113,7 +113,7 @@ namespace vkinit {
         };
     }
 
-    VkRenderingAttachmentInfo GetAttachmentInfo(VkImageView view, VkClearValue* clear, VkImageLayout layout) {
+    VkRenderingAttachmentInfo GetAttachmentInfo(VkImageView view, VkClearValue *clear, VkImageLayout layout) {
         VkRenderingAttachmentInfo colorAttachment{
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
             .imageView = view,
@@ -129,7 +129,18 @@ namespace vkinit {
         return colorAttachment;
     }
 
-    VkRenderingInfo GetRenderingInfo(VkExtent2D extent, const VkRenderingAttachmentInfo &colorAttachment, VkRenderingAttachmentInfo* depthAttachment) {
+    VkRenderingAttachmentInfo GetDepthAttachmentInfo(VkImageView view, VkImageLayout layout) {
+        return VkRenderingAttachmentInfo{
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = view,
+            .imageLayout = layout,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue = VkClearValue{.depthStencil = VkClearDepthStencilValue{.depth = 0.0f}},
+        };
+    }
+
+    VkRenderingInfo GetRenderingInfo(VkExtent2D extent, const VkRenderingAttachmentInfo &colorAttachment, VkRenderingAttachmentInfo *depthAttachment) {
         return VkRenderingInfo{
             .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
             .renderArea = VkRect2D{
@@ -141,6 +152,26 @@ namespace vkinit {
             .pColorAttachments = &colorAttachment,
             .pDepthAttachment = depthAttachment,
             .pStencilAttachment = nullptr,
+        };
+    }
+
+    VkPipelineShaderStageCreateInfo GetPipelineShaderStageInfo(VkShaderStageFlagBits stage, VkShaderModule shaderModule, const char *entry) {
+        return VkPipelineShaderStageCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = stage,
+            .module = shaderModule,
+            .pName = entry,
+        };
+    }
+
+    VkPipelineLayoutCreateInfo GetPipelineLayoutInfo() {
+        return VkPipelineLayoutCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .flags = 0,
+            .setLayoutCount = 0,
+            .pSetLayouts = nullptr,
+            .pushConstantRangeCount = 0,
+            .pPushConstantRanges = nullptr,
         };
     }
 }  // namespace vkinit

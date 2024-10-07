@@ -6,3 +6,4 @@ IndentCaseLabels: true
 ColumnLimit: 0
 NamespaceIndentation: All
 FixNamespaceComments: true
+SortIncludes: false

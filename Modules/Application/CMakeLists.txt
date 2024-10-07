@@ -59,6 +59,8 @@ file(GLOB_RECURSE GLSL_FILES
     ${CMAKE_SOURCE_DIR}/Assets/Shaders/*.glsl
 )
 
+list(FILTER GLSL_FILES EXCLUDE REGEX ".*\\.spv$")
+
 foreach(GLSL_FILE ${GLSL_FILES})
     get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
     set(SPIRV_FILE ${SPIRV_OUTPUT_DIR}/${FILE_NAME}.spv)

@@ -3,6 +3,7 @@
 #include <VkGuide/Defines.hpp>
 #include <VkGuide/VkDescriptors.hpp>
 #include <VkGuide/VkTypes.hpp>
+#include <VkGuide/VkLoader.hpp>
 
 constexpr std::uint32_t FRAME_OVERLAP{2};
 
@@ -79,17 +80,28 @@ class VulkanEngine {
     void initDescriptors();
     void initPipelines();
     void initBackgroundPipelines();
+    void initTrianglePipeline();
+    void initMeshPipeline();
     void initImGui();
+    void initDefaultData();
 
     void createSwapchain(std::uint32_t width, std::uint32_t height);
     void destroySwapchain();
 
     void drawBackground(VkCommandBuffer commandBuffer);
     void drawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
+    void drawGeometry(VkCommandBuffer commandBuffer);
 
     void immediateSubmit(std::function<void(VkCommandBuffer commandBuffer)> &&function);
 
+    void destroyBuffer(const AllocatedBuffer &buffer);
+
     FrameData &getCurrentFrame();
+
+    AllocatedBuffer createBuffer(std::size_t allocationSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
+   public:
+    GPUMeshBuffers createMesh(const std::span<std::uint32_t> &indices, const std::span<Vertex> &vertices);
 
    private:
     static VulkanEngine g_VkEngine;
@@ -124,6 +136,7 @@ class VulkanEngine {
     VmaAllocator m_Allocator{nullptr};
 
     AllocatedImage m_DrawImage{};
+    AllocatedImage m_DepthImage{};
     VkExtent2D m_DrawExtent{};
 
     DescriptorAllocator m_GlobalDescriptorAllocator{};
@@ -140,4 +153,14 @@ class VulkanEngine {
 
     std::vector<ComputeEffect> m_BackgroundEffects{};
     std::uint32_t m_CurrentBackgroundEffect{0U};
+
+    VkPipelineLayout m_TrianglePipelineLayout{VK_NULL_HANDLE};
+    VkPipeline m_TrianglePipeline{VK_NULL_HANDLE};
+
+    VkPipelineLayout m_MeshPipelineLayout{VK_NULL_HANDLE};
+    VkPipeline m_MeshPipeline{VK_NULL_HANDLE};
+
+    GPUMeshBuffers m_Rectangle;
+
+    std::vector<std::shared_ptr<MeshAsset>> m_TestMeshes{};
 };
