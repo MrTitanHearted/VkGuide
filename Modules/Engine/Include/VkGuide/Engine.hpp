@@ -87,6 +87,7 @@ class VulkanEngine {
 
     void createSwapchain(std::uint32_t width, std::uint32_t height);
     void destroySwapchain();
+    void resizeSwapchain();
 
     void drawBackground(VkCommandBuffer commandBuffer);
     void drawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
@@ -109,6 +110,7 @@ class VulkanEngine {
     bool m_IsInitialized{false};
     std::int32_t m_FrameNumber{0};
     bool m_StopRendering{false};
+    bool m_ResizeRequested{false};
 
     struct SDL_Window *m_Window{nullptr};
     VkExtent2D m_WindowExtent{1200, 1000};
@@ -138,6 +140,7 @@ class VulkanEngine {
     AllocatedImage m_DrawImage{};
     AllocatedImage m_DepthImage{};
     VkExtent2D m_DrawExtent{};
+    float m_RenderScale{1.0f};
 
     DescriptorAllocator m_GlobalDescriptorAllocator{};
 

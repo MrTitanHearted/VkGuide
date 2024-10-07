@@ -18,6 +18,8 @@ class PipelineBuilder {
     void setColorAttachmentFormat(VkFormat format);
     void setDepthFormat(VkFormat format);
     void setDepthTestEnabled(bool depthWriteEnable, VkCompareOp op);
+    void setBlendingAdditiveEnabled();
+    void setBlendingAlphablendEnabled();
     void setMultisamplingNone();
     void setBlendingDisabled();
     void setDepthTestDisabled();

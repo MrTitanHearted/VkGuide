@@ -34,7 +34,7 @@ VulkanEngine &VulkanEngine::GetInstance() {
 
 void VulkanEngine::init() {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_WindowFlags windowFlags{SDL_WINDOW_VULKAN};
+    SDL_WindowFlags windowFlags{(SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE)};
 
     m_Window = SDL_CreateWindow(
         "Vulkan Engine",
@@ -90,13 +90,19 @@ void VulkanEngine::draw() {
     VK_CHECK(vkResetFences(m_Device, 1, &frame.RenderFence));
 
     std::uint32_t swapchainImageIndex;
-    VK_CHECK(vkAcquireNextImageKHR(m_Device, m_Swapchain, 1000000000, frame.SwapchainSemaphore, nullptr, &swapchainImageIndex));
+    {
+        VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, 1000000000, frame.SwapchainSemaphore, nullptr, &swapchainImageIndex);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            m_ResizeRequested = true;
+            return;
+        }
+    }
     const VkImage &swapchainImage = m_SwapchainImages[swapchainImageIndex];
     const VkImageView &swapchainImageView = m_SwapchainImageViews[swapchainImageIndex];
 
     m_DrawExtent = VkExtent2D{
-        .width = m_DrawImage.Extent.width,
-        .height = m_DrawImage.Extent.height,
+        .width = (std::uint32_t)((float)std::min(m_SwapchainExtent.width, m_DrawImage.Extent.width) * m_RenderScale),
+        .height = (std::uint32_t)((float)std::min(m_SwapchainExtent.height, m_DrawImage.Extent.height) * m_RenderScale),
     };
 
     const VkCommandBuffer &commandBuffer = frame.CommandBuffer;
@@ -138,7 +144,14 @@ void VulkanEngine::draw() {
 
         .pImageIndices = &swapchainImageIndex,
     };
-    VK_CHECK(vkQueuePresentKHR(m_GraphicsQueue, &presentInfo));
+
+    {
+        VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &presentInfo);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            m_ResizeRequested = true;
+            return;
+        }
+    }
 
     m_FrameNumber++;
 }
@@ -261,12 +274,18 @@ void VulkanEngine::run() {
             continue;
         }
 
+        if (m_ResizeRequested) {
+            resizeSwapchain();
+        }
+
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
         if (ImGui::Begin("Background")) {
             ComputeEffect &selected = m_BackgroundEffects[m_CurrentBackgroundEffect];
+
+            ImGui::SliderFloat("Render Scale", &m_RenderScale, 0.3f, 1.0f);
 
             ImGui::Text("Selected effect: ", selected.Name);
 
@@ -556,7 +575,6 @@ void VulkanEngine::initTrianglePipeline() {
     pipelineBuilder.setMultisamplingNone();
     pipelineBuilder.setBlendingDisabled();
     pipelineBuilder.setDepthTestDisabled();
-    //pipelineBuilder.setDepthTestEnabled(true, VK_COMPARE_OP_NEVER);
     pipelineBuilder.setColorAttachmentFormat(m_DrawImage.Format);
     pipelineBuilder.setDepthFormat(m_DepthImage.Format);
 
@@ -594,8 +612,7 @@ void VulkanEngine::initMeshPipeline() {
     pipelineBuilder.setPolygonMode(VK_POLYGON_MODE_FILL);
     pipelineBuilder.setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipelineBuilder.setMultisamplingNone();
-    pipelineBuilder.setBlendingDisabled();
-    // pipelineBuilder.setDepthTestDisabled();
+    pipelineBuilder.setBlendingAdditiveEnabled();
     pipelineBuilder.setDepthTestEnabled(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
     pipelineBuilder.setColorAttachmentFormat(m_DrawImage.Format);
     pipelineBuilder.setDepthFormat(m_DepthImage.Format);
@@ -660,7 +677,7 @@ void VulkanEngine::initImGui() {
     ImGui_ImplVulkan_Init(&initInfo);
     ImGui_ImplVulkan_CreateFontsTexture();
 
-    m_MainDeletionQueue.pushFunction([=, this]() {
+    m_MainDeletionQueue.pushFunction([imguiPool, this]() {
         ImGui_ImplVulkan_Shutdown();
         vkDestroyDescriptorPool(m_Device, imguiPool, nullptr);
     });
@@ -728,6 +745,18 @@ void VulkanEngine::destroySwapchain() {
         vkDestroyImageView(m_Device, view, nullptr);
     }
     vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+}
+
+void VulkanEngine::resizeSwapchain() {
+    vkDeviceWaitIdle(m_Device);
+
+    std::int32_t width{0};
+    std::int32_t height{0};
+    SDL_GetWindowSize(m_Window, &width, &height);
+
+    createSwapchain(width, height);
+
+    m_ResizeRequested = false;
 }
 
 FrameData &VulkanEngine::getCurrentFrame() {
